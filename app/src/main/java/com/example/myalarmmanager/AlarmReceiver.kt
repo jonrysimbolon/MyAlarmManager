@@ -38,8 +38,14 @@ class AlarmReceiver : BroadcastReceiver() {
     fun cancelAlarm(context: Context, type: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
-        val requestCode = if (type.equals(TYPE_ONE_TIME, ignoreCase = true)) ID_ONETIME else ID_REPEATING
-        val pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE)
+        val requestCode =
+            if (type.equals(TYPE_ONE_TIME, ignoreCase = true)) ID_ONETIME else ID_REPEATING
+        val pendingIntent =
+            getPendingIntentCustom(
+                context,
+                requestCode,
+                intent
+            )
         if (pendingIntent != null) {
             pendingIntent.cancel()
             alarmManager.cancel(pendingIntent)
@@ -66,21 +72,23 @@ class AlarmReceiver : BroadcastReceiver() {
             calendar.add(Calendar.SECOND, 5)
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            ID_REPEATING,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val pendingIntent =
+            getPendingIntentCustom(
+                context,
+                ID_REPEATING,
+                intent
+            )
 
         val interval = 5000
 
-        alarmManager.setInexactRepeating(
-            AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            interval.toLong(),
-            pendingIntent
-        )
+        if(pendingIntent != null){
+            alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                interval.toLong(),
+                pendingIntent
+            )
+        }
 
         Toast.makeText(context, "Repeating alarm set up", Toast.LENGTH_SHORT).show()
     }
@@ -108,8 +116,14 @@ class AlarmReceiver : BroadcastReceiver() {
         calendar.set(Calendar.MINUTE, Integer.parseInt(timeArray[1]))
         calendar.set(Calendar.SECOND, 0)
         val pendingIntent =
-            PendingIntent.getBroadcast(context, ID_ONETIME, intent, PendingIntent.FLAG_IMMUTABLE)
-        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+            getPendingIntentCustom(
+                context,
+                ID_ONETIME,
+                intent
+            )
+        if(pendingIntent != null){
+            alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+        }
         Toast.makeText(context, "One time alarm set up", Toast.LENGTH_SHORT).show()
     }
 
@@ -154,6 +168,27 @@ class AlarmReceiver : BroadcastReceiver() {
             false
         } catch (e: ParseException) {
             true
+        }
+    }
+
+    private fun getPendingIntentCustom(
+        context: Context, requestCode: Int,
+        intent: Intent
+    ): PendingIntent? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_MUTABLE
+            )
+        } else {
+            PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
         }
     }
 
